@@ -10,6 +10,13 @@ type TokenResponse = {
   [key: string]: unknown;
 };
 
+export type StoredToken = {
+  accessToken: string;
+  expiresAt: string | null;
+  tokenType: string | null;
+  raw: any;
+};
+
 export type InstagramProfile = {
   igUserId: string;
   username: string | null;
@@ -109,6 +116,16 @@ function todayUtcDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function buildInstagramGraphUrl(path: string, params?: Record<string, string | number | undefined>) {
+  const url = new URL(`https://graph.instagram.com${path}`);
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value !== undefined) {
+      url.searchParams.set(key, String(value));
+    }
+  }
+  return url.toString();
+}
+
 export function buildInstagramAuthorizeUrl(state: string) {
   if (!config.metaAppId || !config.metaRedirectUri) {
     throw new Error('META_APP_ID / META_REDIRECT_URI are required');
@@ -155,6 +172,86 @@ export async function exchangeCodeForAccessToken(code: string): Promise<TokenRes
   }
 
   return safeJson<TokenResponse>(response);
+}
+
+export async function exchangeForLongLivedToken(shortLivedToken: string): Promise<TokenResponse> {
+  if (!config.metaAppSecret) {
+    throw new Error('META_APP_SECRET is required for long-lived token exchange');
+  }
+
+  const url = buildInstagramGraphUrl('/access_token', {
+    grant_type: 'ig_exchange_token',
+    client_secret: config.metaAppSecret,
+    access_token: shortLivedToken
+  });
+  const response = await fetch(url, { cache: 'no-store' });
+
+  if (!response.ok) {
+    const err = await safeJson<{ error?: { message?: string } }>(response);
+    throw new Error(err.error?.message ?? `Long-lived token exchange failed: ${response.status}`);
+  }
+
+  return safeJson<TokenResponse>(response);
+}
+
+export async function refreshLongLivedToken(accessToken: string): Promise<TokenResponse> {
+  const url = buildInstagramGraphUrl('/refresh_access_token', {
+    grant_type: 'ig_refresh_token',
+    access_token: accessToken
+  });
+  const response = await fetch(url, { cache: 'no-store' });
+
+  if (!response.ok) {
+    const err = await safeJson<{ error?: { message?: string } }>(response);
+    throw new Error(err.error?.message ?? `Token refresh failed: ${response.status}`);
+  }
+
+  return safeJson<TokenResponse>(response);
+}
+
+function expiresAtFromNow(expiresIn?: number) {
+  if (!expiresIn || !Number.isFinite(expiresIn)) return null;
+  return new Date(Date.now() + expiresIn * 1000).toISOString();
+}
+
+export async function normalizeTokenForStorage(token: TokenResponse): Promise<StoredToken> {
+  try {
+    const longLived = await exchangeForLongLivedToken(token.access_token);
+    return {
+      accessToken: longLived.access_token,
+      expiresAt: expiresAtFromNow(typeof longLived.expires_in === 'number' ? longLived.expires_in : undefined),
+      tokenType: typeof longLived.token_type === 'string' ? longLived.token_type : null,
+      raw: { source: token, long_lived: longLived }
+    };
+  } catch {
+    return {
+      accessToken: token.access_token,
+      expiresAt: expiresAtFromNow(typeof token.expires_in === 'number' ? token.expires_in : undefined),
+      tokenType: typeof token.token_type === 'string' ? token.token_type : null,
+      raw: token
+    };
+  }
+}
+
+export async function maybeRefreshStoredToken(current: {
+  accessToken: string;
+  expiresAt: string | null;
+}): Promise<StoredToken | null> {
+  if (!current.expiresAt) return null;
+  const expiresAtMs = Date.parse(current.expiresAt);
+  if (Number.isNaN(expiresAtMs)) return null;
+
+  // Refresh when expiring within 24h.
+  const shouldRefresh = Date.now() + 24 * 60 * 60 * 1000 >= expiresAtMs;
+  if (!shouldRefresh) return null;
+
+  const refreshed = await refreshLongLivedToken(current.accessToken);
+  return {
+    accessToken: refreshed.access_token,
+    expiresAt: expiresAtFromNow(typeof refreshed.expires_in === 'number' ? refreshed.expires_in : undefined),
+    tokenType: typeof refreshed.token_type === 'string' ? refreshed.token_type : null,
+    raw: refreshed
+  };
 }
 
 export async function fetchInstagramProfile(accessToken: string): Promise<InstagramProfile> {

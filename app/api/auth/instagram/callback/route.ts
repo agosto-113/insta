@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForAccessToken, fetchInstagramProfile } from '@/lib/meta';
+import { exchangeCodeForAccessToken, fetchInstagramProfile, normalizeTokenForStorage } from '@/lib/meta';
 import { config } from '@/lib/env';
 import { createSupabaseAdmin } from '@/lib/supabase';
 
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const token = await exchangeCodeForAccessToken(code);
+    const storedToken = await normalizeTokenForStorage(token);
     const profile = await fetchInstagramProfile(token.access_token);
     const supabase = createSupabaseAdmin();
 
@@ -55,15 +56,15 @@ export async function GET(request: NextRequest) {
     const { error: tokenError } = await supabase.from('ig_tokens').upsert(
       {
         account_id: accountRow.id,
-        access_token: token.access_token,
-        token_type: typeof token.token_type === 'string' ? token.token_type : null,
-        expires_at: expiresAt(typeof token.expires_in === 'number' ? token.expires_in : undefined),
+        access_token: storedToken.accessToken,
+        token_type: storedToken.tokenType,
+        expires_at: storedToken.expiresAt ?? expiresAt(typeof token.expires_in === 'number' ? token.expires_in : undefined),
         scope: Array.isArray(token.permissions)
           ? token.permissions.join(',')
           : typeof token.scope === 'string'
             ? token.scope
             : null,
-        raw_token_response: token as any,
+        raw_token_response: storedToken.raw as any,
         updated_at: new Date().toISOString()
       } as any,
       { onConflict: 'account_id' }

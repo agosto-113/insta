@@ -3,6 +3,7 @@ import {
   fetchAccountDailyInsights,
   fetchInstagramProfile,
   fetchMediaDailyInsights,
+  maybeRefreshStoredToken,
   fetchRecentMedia,
   type InstagramMedia
 } from '@/lib/meta';
@@ -15,21 +16,42 @@ export async function getConnectedAccounts() {
   const supabase = createSupabaseAdmin();
   const { data, error } = await supabase
     .from('ig_tokens')
-    .select('access_token, account_id, ig_accounts(id, ig_user_id, username)')
+    .select('access_token, account_id, expires_at, token_type, ig_accounts(id, ig_user_id, username)')
     .order('updated_at', { ascending: false });
 
   if (error) throw error;
   return ((data ?? []) as any[]).map((row) => ({
     accountId: row.account_id,
     accessToken: row.access_token,
+    expiresAt: row.expires_at ?? null,
+    tokenType: row.token_type ?? null,
     account: Array.isArray(row.ig_accounts) ? row.ig_accounts[0] : row.ig_accounts
   }));
 }
 
-export async function syncOneAccount(accountId: string, accessToken: string) {
+export async function syncOneAccount(accountId: string, accessToken: string, expiresAt: string | null = null) {
   const supabase = createSupabaseAdmin();
+  let resolvedToken = accessToken;
 
-  const profile = await fetchInstagramProfile(accessToken);
+  const refreshed = await maybeRefreshStoredToken({ accessToken, expiresAt });
+  if (refreshed) {
+    resolvedToken = refreshed.accessToken;
+    await supabase
+      .from('ig_tokens')
+      .upsert(
+        {
+          account_id: accountId,
+          access_token: refreshed.accessToken,
+          token_type: refreshed.tokenType,
+          expires_at: refreshed.expiresAt,
+          raw_token_response: refreshed.raw as any,
+          updated_at: new Date().toISOString()
+        } as any,
+        { onConflict: 'account_id' }
+      );
+  }
+
+  const profile = await fetchInstagramProfile(resolvedToken);
 
   const { data: accountRowRaw, error: accountError } = await supabase
     .from('ig_accounts')
@@ -51,7 +73,7 @@ export async function syncOneAccount(accountId: string, accessToken: string) {
   const accountRow = accountRowRaw as any;
   const resolvedAccountId = accountRow.id;
 
-  const accountInsights = await fetchAccountDailyInsights(accessToken, profile.igUserId);
+  const accountInsights = await fetchAccountDailyInsights(resolvedToken, profile.igUserId);
   const { error: dailyError } = await supabase.from('account_daily_metrics').upsert(
     {
       account_id: resolvedAccountId,
@@ -68,9 +90,9 @@ export async function syncOneAccount(accountId: string, accessToken: string) {
   );
   if (dailyError) throw dailyError;
 
-  const media = await fetchRecentMedia(accessToken, profile.igUserId, 30);
+  const media = await fetchRecentMedia(resolvedToken, profile.igUserId, 30);
   for (const item of media) {
-    await upsertMediaAndInsights(resolvedAccountId, accessToken, item);
+    await upsertMediaAndInsights(resolvedAccountId, resolvedToken, item);
   }
 
   return {
@@ -137,7 +159,7 @@ export async function syncAllConnectedAccounts() {
   const results = [] as Array<{ accountId: string; username: string | null; syncedAt: string; metricDate: string; mediaCount: number }>;
 
   for (const row of rows) {
-    results.push(await syncOneAccount(row.accountId, row.accessToken));
+    results.push(await syncOneAccount(row.accountId, row.accessToken, row.expiresAt));
   }
 
   return {
