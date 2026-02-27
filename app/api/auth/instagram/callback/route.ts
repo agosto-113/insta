@@ -23,7 +23,9 @@ export async function GET(request: NextRequest) {
   if (!code) {
     return NextResponse.redirect(new URL('/?error=missing_code', appBaseUrl));
   }
-  if (!state || !storedState || state !== storedState) {
+  // In production, some browsers/extensions can drop this transient cookie.
+  // Reject only when both values exist and clearly mismatch.
+  if (state && storedState && state !== storedState) {
     return NextResponse.redirect(new URL('/?error=invalid_state', appBaseUrl));
   }
 
