@@ -296,9 +296,9 @@ export async function fetchAccountDailyInsights(accessToken: string, igUserId: s
           ? profileRaw.follower_count
           : null,
     follows: typeof followsValue === 'number' ? followsValue : null,
-    reach: metricValue(insightsRaw, ['reach', 'accounts_reached']),
+    reach: metricValue(insightsRaw, ['reach', 'accounts_reached', 'content_views', 'views']),
     profileViews: metricValue(insightsRaw, ['profile_views']),
-    impressions: metricValue(insightsRaw, ['views', 'impressions']),
+    impressions: metricValue(insightsRaw, ['views', 'impressions', 'content_views']),
     raw: { insights: insightsRaw, profile: profileRaw }
   };
 }
@@ -329,7 +329,7 @@ export async function fetchMediaDailyInsights(accessToken: string, mediaId: stri
   let raw: any = { data: [] };
   try {
     raw = await graphGet<any>(`/${mediaId}/insights`, accessToken, {
-      metric: 'reach,impressions,plays,saves,shares'
+      metric: 'reach,views,plays,saves,shares'
     });
   } catch (error) {
     raw = { error: (error as Error).message, data: [] };
@@ -337,8 +337,8 @@ export async function fetchMediaDailyInsights(accessToken: string, mediaId: stri
 
   return {
     metricDate: todayUtcDate(),
-    reach: metricValue(raw, ['reach', 'accounts_reached']),
-    impressions: metricValue(raw, ['impressions', 'views']),
+    reach: metricValue(raw, ['reach', 'views', 'accounts_reached', 'content_views']),
+    impressions: metricValue(raw, ['views', 'impressions', 'content_views']),
     plays: metricValue(raw, ['plays', 'video_views']),
     saveCount: metricValue(raw, ['saves', 'saved']),
     shares: metricValue(raw, ['shares']),

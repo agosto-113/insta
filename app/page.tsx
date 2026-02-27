@@ -143,6 +143,7 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
                 <th>投稿</th>
                 <th>形式</th>
                 <th>リーチ</th>
+                <th>いいね</th>
                 <th>保存</th>
                 <th>シェア</th>
                 <th>保存率</th>
@@ -160,6 +161,7 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
                   </td>
                   <td>{post.media_type ?? '-'}</td>
                   <td>{int(post.reach)}</td>
+                  <td>{int(post.like_count)}</td>
                   <td>{int(post.save_count)}</td>
                   <td>{int(post.shares)}</td>
                   <td>{pct(post.save_rate)}</td>
@@ -168,7 +170,7 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
               ))}
               {data.topPosts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="muted">同期後にランキングを表示します。</td>
+                  <td colSpan={8} className="muted">同期後にランキングを表示します。</td>
                 </tr>
               )}
             </tbody>
