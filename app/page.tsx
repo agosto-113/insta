@@ -83,6 +83,11 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
           <p className="kpi-value">{int(latest?.profile_views ?? null)}</p>
           <p className="kpi-sub">フォロー導線の強さを見る</p>
         </article>
+        <article className="card kpi">
+          <h3>当日リーチ</h3>
+          <p className="kpi-value">{int(latest?.reach ?? null)}</p>
+          <p className="kpi-sub">到達したアカウント規模</p>
+        </article>
 
         <article className="card panel half">
           <h3>フォロワー推移 (直近14日)</h3>

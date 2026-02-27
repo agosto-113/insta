@@ -327,12 +327,20 @@ export async function fetchRecentMedia(accessToken: string, igUserId: string, li
 
 export async function fetchMediaDailyInsights(accessToken: string, mediaId: string, fallback?: { likeCount?: number | null; commentsCount?: number | null }): Promise<MediaDailyInsights> {
   let raw: any = { data: [] };
-  try {
-    raw = await graphGet<any>(`/${mediaId}/insights`, accessToken, {
-      metric: 'reach,views,plays,saves,shares'
-    });
-  } catch (error) {
-    raw = { error: (error as Error).message, data: [] };
+  const metricCandidates = [
+    'reach,views,plays,saves,shares',
+    'reach,views,saves,shares',
+    'reach,views,saves',
+    'reach,views'
+  ];
+
+  for (const metric of metricCandidates) {
+    try {
+      raw = await graphGet<any>(`/${mediaId}/insights`, accessToken, { metric });
+      break;
+    } catch (error) {
+      raw = { error: (error as Error).message, data: [] };
+    }
   }
 
   return {
