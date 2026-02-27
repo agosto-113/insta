@@ -55,10 +55,15 @@ export type MediaDailyInsights = {
 };
 
 function buildGraphUrl(path: string, params?: Record<string, string | number | undefined>) {
-  const isInstagramGraph = config.metaGraphBaseUrl.includes('graph.instagram.com');
+  const base = config.metaGraphBaseUrl;
+  const isInstagramGraph = base.includes('graph.instagram.com');
+  const isFacebookGraph = base.includes('graph.facebook.com');
+  if (!isInstagramGraph && !isFacebookGraph) {
+    throw new Error(`Invalid META_GRAPH_BASE_URL: ${base}. Use https://graph.instagram.com (Instagram Login) or https://graph.facebook.com`);
+  }
   const basePath = isInstagramGraph
-    ? `${config.metaGraphBaseUrl}${path}`
-    : `${config.metaGraphBaseUrl}/${config.metaApiVersion}${path}`;
+    ? `${base}${path}`
+    : `${base}/${config.metaApiVersion}${path}`;
   const url = new URL(basePath);
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined) {
@@ -73,7 +78,7 @@ async function safeJson<T>(response: Response): Promise<T> {
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new Error(`Meta response is not JSON: ${text.slice(0, 400)}`);
+    throw new Error(`Meta response is not JSON (url=${response.url}, status=${response.status}): ${text.slice(0, 220)}`);
   }
 }
 
