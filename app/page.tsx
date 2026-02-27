@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getDashboardData } from '@/lib/dashboard';
 import { hasCoreEnv } from '@/lib/env';
+import SyncNowButton from '@/components/SyncNowButton';
 
 function pct(n: number | null) {
   if (n === null || Number.isNaN(n)) return '-';
@@ -39,13 +40,12 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link className="button secondary" href="/connect">Instagram連携</Link>
-          <form action="/api/instagram/sync" method="post">
-            <button className="button" type="submit">今すぐ同期</button>
-          </form>
+          <SyncNowButton />
         </div>
       </div>
 
       {searchParams?.connected === '1' && <div className="notice ok">Instagramアカウントの接続が完了しました。</div>}
+      {searchParams?.synced === '1' && <div className="notice ok">同期が完了しました。（対象アカウント: {searchParams?.count ?? '0'}件）</div>}
       {searchParams?.error && <div className="notice error">{decodeURIComponent(searchParams.error)}</div>}
 
       {!envReady && (
