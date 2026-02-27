@@ -49,9 +49,22 @@ create table if not exists media_items (
   thumbnail_url text,
   media_url text,
   posted_at timestamptz,
+  series text,
+  slide_count integer,
+  content_role text,
+  ai_confidence double precision,
+  ai_reason text,
+  hashtag_set text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table media_items add column if not exists series text;
+alter table media_items add column if not exists slide_count integer;
+alter table media_items add column if not exists content_role text;
+alter table media_items add column if not exists ai_confidence double precision;
+alter table media_items add column if not exists ai_reason text;
+alter table media_items add column if not exists hashtag_set text;
 
 create table if not exists media_insights_daily (
   id uuid primary key default gen_random_uuid(),

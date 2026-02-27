@@ -36,6 +36,7 @@ export type InstagramMedia = {
   postedAt: string | null;
   likeCount: number | null;
   commentsCount: number | null;
+  slideCount: number | null;
   raw: any;
 };
 
@@ -305,7 +306,7 @@ export async function fetchAccountDailyInsights(accessToken: string, igUserId: s
 
 export async function fetchRecentMedia(accessToken: string, igUserId: string, limit = 25): Promise<InstagramMedia[]> {
   const raw = await graphGet<any>(`/${igUserId}/media`, accessToken, {
-    fields: 'id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count',
+    fields: 'id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count,children_count',
     limit
   });
 
@@ -321,6 +322,7 @@ export async function fetchRecentMedia(accessToken: string, igUserId: string, li
     postedAt: item.timestamp ?? null,
     likeCount: typeof item.like_count === 'number' ? item.like_count : null,
     commentsCount: typeof item.comments_count === 'number' ? item.comments_count : null,
+    slideCount: typeof item.children_count === 'number' ? item.children_count : null,
     raw: item
   }));
 }

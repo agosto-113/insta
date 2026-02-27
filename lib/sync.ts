@@ -7,6 +7,8 @@ import {
   fetchRecentMedia,
   type InstagramMedia
 } from '@/lib/meta';
+import { chunkArray, classifyPost } from '@/lib/classify';
+import { captionToTitle } from '@/lib/posts';
 
 function isoDate(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -95,6 +97,8 @@ export async function syncOneAccount(accountId: string, accessToken: string, exp
     await upsertMediaAndInsights(resolvedAccountId, resolvedToken, item);
   }
 
+  await classifyUnclassifiedMedia(resolvedAccountId);
+
   return {
     accountId: resolvedAccountId,
     username: profile.username,
@@ -119,6 +123,7 @@ async function upsertMediaAndInsights(accountId: string, accessToken: string, it
         thumbnail_url: item.thumbnailUrl,
         media_url: item.mediaUrl,
         posted_at: item.postedAt,
+        slide_count: item.slideCount,
         updated_at: new Date().toISOString()
       } as any,
       { onConflict: 'ig_media_id' }
@@ -152,6 +157,42 @@ async function upsertMediaAndInsights(accountId: string, accessToken: string, it
   );
 
   if (insightError) throw insightError;
+}
+
+async function classifyUnclassifiedMedia(accountId: string) {
+  const supabase = createSupabaseAdmin();
+
+  const { data: unclassified } = await supabase
+    .from('media_items')
+    .select('id, caption')
+    .eq('account_id', accountId)
+    .is('series', null)
+    .order('posted_at', { ascending: false })
+    .limit(20);
+
+  if (!unclassified || unclassified.length === 0) return;
+
+  const groups = chunkArray(unclassified as Array<{ id: string; caption: string | null }>, 5);
+
+  for (const group of groups) {
+    await Promise.all(
+      group.map(async (post) => {
+        const title = captionToTitle(post.caption);
+        const result = await classifyPost(title, post.caption);
+
+        await (supabase as any)
+          .from('media_items')
+          .update({
+            series: result.series,
+            content_role: result.content_role,
+            ai_confidence: result.confidence,
+            ai_reason: result.reason,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', post.id);
+      })
+    );
+  }
 }
 
 export async function syncAllConnectedAccounts() {

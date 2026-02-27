@@ -90,6 +90,12 @@ export type Database = {
           thumbnail_url: string | null;
           media_url: string | null;
           posted_at: string | null;
+          series: string | null;
+          slide_count: number | null;
+          content_role: string | null;
+          ai_confidence: number | null;
+          ai_reason: string | null;
+          hashtag_set: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -104,6 +110,12 @@ export type Database = {
           thumbnail_url?: string | null;
           media_url?: string | null;
           posted_at?: string | null;
+          series?: string | null;
+          slide_count?: number | null;
+          content_role?: string | null;
+          ai_confidence?: number | null;
+          ai_reason?: string | null;
+          hashtag_set?: string | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -28,5 +28,6 @@ export const config = {
   instagramAuthorizeUrl: process.env.INSTAGRAM_OAUTH_AUTHORIZE_URL ?? 'https://www.instagram.com/oauth/authorize',
   instagramTokenUrl: process.env.INSTAGRAM_OAUTH_TOKEN_URL ?? 'https://api.instagram.com/oauth/access_token',
   metaRedirectUri: process.env.META_REDIRECT_URI,
-  cronSecret: process.env.CRON_SECRET
+  cronSecret: process.env.CRON_SECRET,
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY
 };

@@ -35,7 +35,7 @@ export default function SyncNowButton() {
   }
 
   return (
-    <button className="button" type="button" onClick={onSync} disabled={loading}>
+    <button className="button-primary" type="button" onClick={onSync} disabled={loading}>
       {loading ? '同期中...' : '今すぐ同期'}
     </button>
   );

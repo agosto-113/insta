@@ -1,47 +1,58 @@
 import Link from 'next/link';
 import { unstable_noStore as noStore } from 'next/cache';
-import { getDashboardData } from '@/lib/dashboard';
-import { hasCoreEnv } from '@/lib/env';
+import Card from '@/components/ui/Card';
 import SyncNowButton from '@/components/SyncNowButton';
-
-function pct(n: number | null) {
-  if (n === null || Number.isNaN(n)) return '-';
-  return `${(n * 100).toFixed(1)}%`;
-}
+import LineChartSimple from '@/components/LineChartSimple';
+import ActionSuggest from '@/components/ActionSuggest';
+import PostRankingTable from '@/components/PostRankingTable';
+import { getDashboardData, getPhaseBadge } from '@/lib/dashboard';
+import { hasCoreEnv } from '@/lib/env';
 
 function int(n: number | null | undefined) {
   if (n == null || Number.isNaN(n)) return '-';
   return new Intl.NumberFormat('ja-JP').format(n);
 }
 
+function pct(n: number | null | undefined) {
+  if (n == null || Number.isNaN(n)) return '-';
+  return `${(n * 100).toFixed(1)}%`;
+}
+
+function deltaPt(thisWeek: number, lastWeek: number) {
+  const diff = (thisWeek - lastWeek) * 100;
+  const sign = diff >= 0 ? '▲' : '▼';
+  return `${sign}${Math.abs(diff).toFixed(1)}pt`;
+}
+
 export default async function Home({ searchParams }: { searchParams?: Record<string, string> }) {
   noStore();
+
   const envReady = hasCoreEnv();
-  const data = envReady ? await getDashboardData() : { account: null, series: [], topPosts: [] };
-
-  const latest = data.series[data.series.length - 1];
-  const weeklyDelta = data.series.slice(-7).reduce((sum, row) => sum + (row.follower_net_delta ?? 0), 0);
-  const totalReach = data.series.slice(-7).reduce((sum, row) => sum + (row.reach ?? 0), 0);
-  const totalProfileViews = data.series.slice(-7).reduce((sum, row) => sum + (row.profile_views ?? 0), 0);
-  const profileVisitRate = totalReach > 0 ? totalProfileViews / totalReach : null;
-
-  const bars = data.series.slice(-14);
-  const maxFollowers = Math.max(...bars.map((b) => b.followers_count ?? 0), 1);
+  const data = envReady ? await getDashboardData() : await getDashboardData(0);
+  const latest = data.daily[data.daily.length - 1];
+  const followers = latest?.followers_count ?? 0;
+  const phase = getPhaseBadge(followers);
+  const totalReach7d = data.daily.slice(-7).reduce((sum, row) => sum + (row.reach ?? 0), 0);
+  const profileViews7d = data.daily.slice(-7).reduce((sum, row) => sum + (row.profile_views ?? 0), 0);
+  const profileVisitRate = totalReach7d > 0 ? profileViews7d / totalReach7d : null;
+  const progress = data.phaseProgressTarget > 0
+    ? Math.min(100, Math.round((data.phaseProgressCurrent / data.phaseProgressTarget) * 100))
+    : 0;
 
   return (
-    <main className="container">
-      <div className="header">
+    <main className="page">
+      <div className="header-row">
         <div>
           <div className="badge">Follower Acquisition Dashboard MVP</div>
-          <h1 style={{ margin: '10px 0 6px' }}>
-            {data.account?.username ? `@${data.account.username}` : 'Instagram Growth Insights'}
-          </h1>
-          <p className="muted" style={{ margin: 0 }}>
-            フォロワー獲得に効く投稿と、日次インサイト推移を追うためのMVP
-          </p>
+          <h1 className="title">思考の取説ノート｜つき 🌙</h1>
+          <p className="subtitle">フォロワー獲得に効く投稿と、日次インサイト推移を追うためのMVP</p>
+          <div className="phase-badge" style={{ background: phase.color, color: phase.color === '#0F172A' ? '#FFFBF5' : '#0F172A', marginTop: 10 }}>
+            {phase.label}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link className="button secondary" href="/connect">Instagram連携</Link>
+
+        <div className="actions">
+          <Link className="button-secondary" href="/connect">Instagram連携</Link>
           <SyncNowButton />
         </div>
       </div>
@@ -52,135 +63,97 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
 
       {!envReady && (
         <div className="notice error">
-          `.env.local` に Supabase / Meta の環境変数が未設定です。`/Users/hazuki/Documents/New project/.env.example` を元に設定してください。
+          `.env.local` の Supabase / Meta 環境変数が未設定です。
         </div>
       )}
 
-      {envReady && !data.account && (
-        <div className="notice">
-          まだ連携済みアカウントがありません。先に <Link href="/connect">Instagram連携</Link> を実行してください。
-        </div>
-      )}
+      <section className="kpi-grid" style={{ marginTop: 12 }}>
+        <Card className="kpi-card">
+          <h3 className="section-title">現在フォロワー数</h3>
+          <div className="kpi-value">{int(followers)}</div>
+          <div className="kpi-sub">最新日次スナップショット</div>
+        </Card>
 
-      <section className="grid">
-        <article className="card kpi">
-          <h3>現在フォロワー数</h3>
-          <p className="kpi-value">{int(latest?.followers_count ?? null)}</p>
-          <p className="kpi-sub">最新日次スナップショット</p>
-        </article>
-        <article className="card kpi">
-          <h3>7日純増</h3>
-          <p className="kpi-value">{int(weeklyDelta)}</p>
-          <p className="kpi-sub">日次差分の合計</p>
-        </article>
-        <article className="card kpi">
-          <h3>プロフィール訪問率 (7日)</h3>
-          <p className="kpi-value">{pct(profileVisitRate)}</p>
-          <p className="kpi-sub">`profile_views / reach`</p>
-        </article>
-        <article className="card kpi">
-          <h3>当日プロフィールアクセス</h3>
-          <p className="kpi-value">{int(latest?.profile_views ?? null)}</p>
-          <p className="kpi-sub">フォロー導線の強さを見る</p>
-        </article>
-        <article className="card kpi">
-          <h3>当日リーチ</h3>
-          <p className="kpi-value">{int(latest?.reach ?? null)}</p>
-          <p className="kpi-sub">到達したアカウント規模</p>
-        </article>
+        <Card className="kpi-card">
+          <h3 className="section-title">7日純増</h3>
+          <div className="kpi-value">{data.weeklyGrowth >= 0 ? '+' : ''}{int(data.weeklyGrowth)}</div>
+          <div className="kpi-sub">日次差分の合計</div>
+        </Card>
 
-        <article className="card panel half">
-          <h3>フォロワー推移 (直近14日)</h3>
-          {bars.length === 0 ? (
-            <p className="muted">データがありません。</p>
-          ) : (
-            <>
-              <div className="spark" aria-hidden>
-                {bars.map((row) => {
-                  const height = Math.max(4, Math.round(((row.followers_count ?? 0) / maxFollowers) * 150));
-                  return <div key={row.metric_date} className="spark-bar" style={{ height }} />;
-                })}
-              </div>
-              <div className="spark-labels">
-                <span>{bars[0]?.metric_date}</span>
-                <span>{bars[bars.length - 1]?.metric_date}</span>
-              </div>
-            </>
-          )}
-        </article>
+        <Card className="kpi-card">
+          <h3 className="section-title">プロフィール訪問率（7日）</h3>
+          <div className="kpi-value">{pct(profileVisitRate)}</div>
+          <div className="kpi-sub">profile_views / reach</div>
+        </Card>
 
-        <article className="card panel half">
-          <h3>日次推移 (直近10日)</h3>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>日付</th>
-                <th>純増</th>
-                <th>リーチ</th>
-                <th>プロフィール</th>
-                <th>フォロー</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.series.slice(-10).reverse().map((row) => (
-                <tr key={row.metric_date}>
-                  <td>{row.metric_date}</td>
-                  <td>{int(row.follower_net_delta)}</td>
-                  <td>{int(row.reach)}</td>
-                  <td>{int(row.profile_views)}</td>
-                  <td>{int(row.follows)}</td>
-                </tr>
-              ))}
-              {data.series.length === 0 && (
+        <Card className="kpi-card">
+          <h3 className="section-title">当日プロフィールアクセス</h3>
+          <div className="kpi-value">{int(latest?.profile_views)}</div>
+          <div className="kpi-sub">フォロー導線の強さを見る</div>
+        </Card>
+
+        <Card className="kpi-card">
+          <h3 className="section-title">平均保存率（最重要KPI）</h3>
+          <div className="kpi-value">{pct(data.avgSaveRateThisWeek)}</div>
+          <div className="kpi-sub">{deltaPt(data.avgSaveRateThisWeek, data.avgSaveRateLastWeek)}（先週比）</div>
+        </Card>
+
+        <Card className={`kpi-card ${data.avgSaveRateThisWeek < 0.02 ? 'kpi-warning' : ''}`}>
+          <h3 className="section-title">次のフェーズまで</h3>
+          <div className="kpi-value">あと {int(data.phaseProgressRemaining)}人</div>
+          <div className="progress"><span style={{ width: `${progress}%` }} /></div>
+        </Card>
+      </section>
+
+      <section className="grid-2">
+        <Card>
+          <h3 className="section-title">フォロワー推移（直近14日）</h3>
+          <LineChartSimple points={data.chartPoints} />
+        </Card>
+
+        <Card>
+          <h3 className="section-title">日次推移（直近10日）</h3>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="muted">同期後に表示されます。</td>
+                  <th>日付</th>
+                  <th>純増</th>
+                  <th>リーチ</th>
+                  <th>プロフィール</th>
+                  <th>フォロー</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </article>
+              </thead>
+              <tbody>
+                {data.daily.slice(-10).reverse().map((row) => (
+                  <tr key={row.metric_date}>
+                    <td>{row.metric_date}</td>
+                    <td>{row.follower_net_delta != null ? `${row.follower_net_delta >= 0 ? '+' : ''}${int(row.follower_net_delta)}` : '-'}</td>
+                    <td>{int(row.reach)}</td>
+                    <td>{int(row.profile_views)}</td>
+                    <td>{int(row.follows)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </section>
 
-        <article className="card panel">
-          <h3>投稿ランキング (保存率重視 / フォロワー獲得向け)</h3>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>投稿</th>
-                <th>形式</th>
-                <th>リーチ</th>
-                <th>いいね</th>
-                <th>保存</th>
-                <th>シェア</th>
-                <th>保存率</th>
-                <th>シェア率</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.topPosts.map((post) => (
-                <tr key={post.id}>
-                  <td>
-                    <div style={{ maxWidth: 420 }}>
-                      <div>{post.caption?.slice(0, 72) || '(captionなし)'}</div>
-                      <div className="muted">{post.posted_at?.slice(0, 10) ?? '-'} {post.permalink && <a href={post.permalink} target="_blank">open</a>}</div>
-                    </div>
-                  </td>
-                  <td>{post.media_type ?? '-'}</td>
-                  <td>{int(post.reach)}</td>
-                  <td>{int(post.like_count)}</td>
-                  <td>{int(post.save_count)}</td>
-                  <td>{int(post.shares)}</td>
-                  <td>{pct(post.save_rate)}</td>
-                  <td>{pct(post.share_rate)}</td>
-                </tr>
-              ))}
-              {data.topPosts.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="muted">同期後にランキングを表示します。</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </article>
+      <div style={{ marginTop: 12 }}>
+        <ActionSuggest
+          data={{
+            avgSaveRateThisWeek: data.avgSaveRateThisWeek,
+            avgSaveRateLastWeek: data.avgSaveRateLastWeek,
+            weeklyGrowth: data.weeklyGrowth,
+            recentThreeSeries: data.recentThreeSeries,
+            postsThisWeek: data.postsThisWeek
+          }}
+        />
+      </div>
+
+      <section style={{ marginTop: 12 }}>
+        <PostRankingTable posts={data.topPosts} />
       </section>
     </main>
   );
