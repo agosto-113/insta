@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { unstable_noStore as noStore } from 'next/cache';
 import { getDashboardData } from '@/lib/dashboard';
 import { hasCoreEnv } from '@/lib/env';
 import SyncNowButton from '@/components/SyncNowButton';
@@ -14,6 +15,7 @@ function int(n: number | null | undefined) {
 }
 
 export default async function Home({ searchParams }: { searchParams?: Record<string, string> }) {
+  noStore();
   const envReady = hasCoreEnv();
   const data = envReady ? await getDashboardData() : { account: null, series: [], topPosts: [] };
 
