@@ -55,7 +55,11 @@ export type MediaDailyInsights = {
 };
 
 function buildGraphUrl(path: string, params?: Record<string, string | number | undefined>) {
-  const url = new URL(`${config.metaGraphBaseUrl}/${config.metaApiVersion}${path}`);
+  const isInstagramGraph = config.metaGraphBaseUrl.includes('graph.instagram.com');
+  const basePath = isInstagramGraph
+    ? `${config.metaGraphBaseUrl}${path}`
+    : `${config.metaGraphBaseUrl}/${config.metaApiVersion}${path}`;
+  const url = new URL(basePath);
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined) {
       url.searchParams.set(key, String(value));
