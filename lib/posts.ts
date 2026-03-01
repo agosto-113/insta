@@ -20,6 +20,8 @@ export type PostWithMetrics = {
   ai_reason: string | null;
   hashtag_set: string | null;
   reach: number | null;
+  impressions: number | null;
+  plays: number | null;
   save_count: number | null;
   shares: number | null;
   like_count: number | null;
@@ -78,7 +80,7 @@ export async function getPostsWithLatestInsights(input?: {
   const mediaIds = mediaItems.map((item) => item.id);
   const { data: insightRows } = await supabase
     .from('media_insights_daily')
-    .select('media_item_id, metric_date, like_count, comments_count, save_count, shares, reach')
+    .select('media_item_id, metric_date, like_count, comments_count, save_count, shares, reach, impressions, plays')
     .in('media_item_id', mediaIds)
     .order('metric_date', { ascending: false });
 
@@ -114,6 +116,8 @@ export async function getPostsWithLatestInsights(input?: {
       ai_reason: item.ai_reason,
       hashtag_set: item.hashtag_set,
       reach,
+      impressions: typeof insight?.impressions === 'number' ? insight.impressions : null,
+      plays: typeof insight?.plays === 'number' ? insight.plays : null,
       save_count: saveCount,
       shares,
       like_count: typeof insight?.like_count === 'number' ? insight.like_count : null,

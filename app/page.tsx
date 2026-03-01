@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { unstable_noStore as noStore } from 'next/cache';
 import Card from '@/components/ui/Card';
 import SyncNowButton from '@/components/SyncNowButton';
+import CopyWeeklyReportButton from '@/components/CopyWeeklyReportButton';
 import LineChartSimple from '@/components/LineChartSimple';
 import ActionSuggest from '@/components/ActionSuggest';
 import PostRankingTable from '@/components/PostRankingTable';
@@ -53,6 +54,7 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
 
         <div className="actions">
           <Link className="button-secondary" href="/connect">Instagram連携</Link>
+          <CopyWeeklyReportButton />
           <SyncNowButton />
         </div>
       </div>
