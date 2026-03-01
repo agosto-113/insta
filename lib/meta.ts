@@ -347,6 +347,7 @@ export async function fetchMediaDailyInsights(accessToken: string, mediaId: stri
     tryMetric('reach'),
     tryMetric('views'),
     tryMetric('plays'),
+    tryMetric('saved'),
     tryMetric('saves'),
     tryMetric('shares')
   ]);
