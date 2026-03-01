@@ -328,22 +328,33 @@ export async function fetchRecentMedia(accessToken: string, igUserId: string, li
 }
 
 export async function fetchMediaDailyInsights(accessToken: string, mediaId: string, fallback?: { likeCount?: number | null; commentsCount?: number | null }): Promise<MediaDailyInsights> {
-  let raw: any = { data: [] };
-  const metricCandidates = [
-    'reach,views,plays,saves,shares',
-    'reach,views,saves,shares',
-    'reach,views,saves',
-    'reach,views'
-  ];
+  const rawParts: Record<string, any> = {};
+  const metricData: any[] = [];
 
-  for (const metric of metricCandidates) {
+  async function tryMetric(metric: string) {
     try {
-      raw = await graphGet<any>(`/${mediaId}/insights`, accessToken, { metric });
-      break;
+      const response = await graphGet<any>(`/${mediaId}/insights`, accessToken, { metric });
+      rawParts[metric] = response;
+      if (Array.isArray(response?.data)) {
+        metricData.push(...response.data);
+      }
     } catch (error) {
-      raw = { error: (error as Error).message, data: [] };
+      rawParts[metric] = { error: (error as Error).message };
     }
   }
+
+  await Promise.all([
+    tryMetric('reach'),
+    tryMetric('views'),
+    tryMetric('plays'),
+    tryMetric('saves'),
+    tryMetric('shares')
+  ]);
+
+  const raw = {
+    data: metricData,
+    parts: rawParts
+  };
 
   return {
     metricDate: todayUtcDate(),
