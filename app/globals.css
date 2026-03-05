@@ -232,12 +232,12 @@ h4 {
   border-left: 3px solid #0f172a;
 }
 
-.save-rate-low {
-  color: #cbd5e1;
-}
-
 .row-clickable {
   cursor: pointer;
+}
+
+.value-low {
+  color: #94a3b8;
 }
 
 .pill {

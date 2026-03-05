@@ -60,9 +60,8 @@ export default function PostRankingTable({ posts }: { posts: PostWithMetrics[] }
                 const rowClass =
                   post.save_rate != null && post.save_rate >= 0.02
                     ? 'save-rate-high'
-                    : post.save_rate != null && post.save_rate <= 0.005
-                      ? 'save-rate-low'
-                      : '';
+                    : '';
+                const lowSaveRate = post.save_rate != null && post.save_rate <= 0.005;
 
                 return (
                   <tr
@@ -90,7 +89,7 @@ export default function PostRankingTable({ posts }: { posts: PostWithMetrics[] }
                     <td>{int(post.save_count)}</td>
                     <td>{int(post.like_count)}</td>
                     <td>{int(post.shares)}</td>
-                    <td>{pct(post.save_rate)}</td>
+                    <td className={lowSaveRate ? 'value-low' : ''}>{pct(post.save_rate)}</td>
                   </tr>
                 );
               })}

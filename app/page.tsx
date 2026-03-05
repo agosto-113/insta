@@ -25,6 +25,19 @@ function deltaPt(thisWeek: number, lastWeek: number) {
   return `${sign}${Math.abs(diff).toFixed(1)}pt`;
 }
 
+function syncHealth(lastMetricDate: string | null) {
+  if (!lastMetricDate) return { label: '未同期', stale: true };
+  const today = new Date();
+  const ymd = today.toISOString().slice(0, 10);
+  if (lastMetricDate === ymd) return { label: '正常（本日分あり）', stale: false };
+
+  const last = Date.parse(lastMetricDate);
+  const now = Date.parse(ymd);
+  const diffDays = Number.isNaN(last) ? 99 : Math.floor((now - last) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 1) return { label: '概ね正常（前日分まで）', stale: false };
+  return { label: `停止の可能性（最終: ${lastMetricDate}）`, stale: true };
+}
+
 export default async function Home({ searchParams }: { searchParams?: Record<string, string> }) {
   noStore();
 
@@ -39,6 +52,7 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
   const progress = data.phaseProgressTarget > 0
     ? Math.min(100, Math.round((data.phaseProgressCurrent / data.phaseProgressTarget) * 100))
     : 0;
+  const cron = syncHealth(data.lastMetricDate);
 
   return (
     <main className="page">
@@ -62,6 +76,9 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
       {searchParams?.connected === '1' && <div className="notice ok">Instagramアカウントの接続が完了しました。</div>}
       {searchParams?.synced === '1' && <div className="notice ok">同期が完了しました。（対象アカウント: {searchParams?.count ?? '0'}件）</div>}
       {searchParams?.error && <div className="notice error">{decodeURIComponent(searchParams.error)}</div>}
+      <div className={`notice ${cron.stale ? 'error' : 'ok'}`}>
+        最終同期: {data.lastSyncedAt ? new Date(data.lastSyncedAt).toLocaleString('ja-JP') : '未取得'} / 自動同期: {cron.label}
+      </div>
 
       {!envReady && (
         <div className="notice error">

@@ -3,6 +3,8 @@ import { buildSeriesAggregates, getPostsWithLatestInsights, type PostWithMetrics
 
 export type DashboardData = {
   account: { id: string; username: string | null } | null;
+  lastSyncedAt: string | null;
+  lastMetricDate: string | null;
   daily: Array<{
     metric_date: string;
     followers_count: number | null;
@@ -90,6 +92,8 @@ export async function getDashboardData(days = 45): Promise<DashboardData> {
   if (!account) {
     return {
       account: null,
+      lastSyncedAt: null,
+      lastMetricDate: null,
       daily: [],
       topPosts: [],
       chartPoints: [],
@@ -115,6 +119,14 @@ export async function getDashboardData(days = 45): Promise<DashboardData> {
     .eq('account_id', account.id)
     .gte('metric_date', sinceDate)
     .order('metric_date', { ascending: true });
+
+  const { data: latestDailyUpdate } = await supabase
+    .from('account_daily_metrics')
+    .select('updated_at, metric_date')
+    .eq('account_id', account.id)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   const daily = ((dailyRows ?? []) as DashboardData['daily']).filter((row) => Boolean(row.metric_date));
 
@@ -190,6 +202,8 @@ export async function getDashboardData(days = 45): Promise<DashboardData> {
 
   return {
     account,
+    lastSyncedAt: (latestDailyUpdate as any)?.updated_at ?? null,
+    lastMetricDate: (latestDailyUpdate as any)?.metric_date ?? null,
     daily,
     topPosts,
     chartPoints,
