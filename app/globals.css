@@ -111,6 +111,8 @@ h4 {
   padding: 8px 16px;
   font-size: 14px;
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
 }
 
 .button-secondary {
@@ -121,6 +123,19 @@ h4 {
   padding: 8px 16px;
   font-size: 14px;
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.button-primary:hover,
+.button-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.button-primary:disabled,
+.button-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .badge {
@@ -160,6 +175,15 @@ h4 {
 
 .kpi-card {
   min-height: 120px;
+}
+
+.card-base {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-base:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .kpi-value {
@@ -234,6 +258,11 @@ h4 {
 
 .row-clickable {
   cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.row-clickable:hover {
+  background: #fffaf3;
 }
 
 .value-low {
@@ -344,6 +373,46 @@ h4 {
   min-height: calc(100vh - 100px);
   display: grid;
   place-items: center;
+}
+
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f3ebdf 25%, #ece2d3 37%, #f3ebdf 63%);
+  background-size: 400% 100%;
+  animation: skeleton 1.4s ease infinite;
+}
+
+.period-switch {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.period-link {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #475569;
+  border-right: 1px solid var(--line);
+  background: #fff;
+}
+
+.period-link:last-child {
+  border-right: none;
+}
+
+.period-link.active {
+  background: #0f172a;
+  color: #fffbf5;
+}
+
+@keyframes skeleton {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
 }
 
 @media (max-width: 1100px) {

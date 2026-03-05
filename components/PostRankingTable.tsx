@@ -15,6 +15,14 @@ function pct(value: number | null | undefined) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function mediaTypeLabel(mediaType: string | null | undefined) {
+  if (!mediaType) return '-';
+  if (mediaType === 'CAROUSEL_ALBUM') return '📚 カルーセル';
+  if (mediaType === 'VIDEO') return '🎞️ リール/動画';
+  if (mediaType === 'IMAGE') return '🖼️ 画像';
+  return mediaType;
+}
+
 export default function PostRankingTable({ posts }: { posts: PostWithMetrics[] }) {
   const [seriesFilter, setSeriesFilter] = useState('all');
   const [selected, setSelected] = useState<PostWithMetrics | null>(null);
@@ -84,7 +92,7 @@ export default function PostRankingTable({ posts }: { posts: PostWithMetrics[] }
                         ? CONTENT_ROLE_LABEL_MAP[post.content_role] ?? post.content_role
                         : '-'}
                     </td>
-                    <td>{post.media_type ?? '-'}</td>
+                    <td>{mediaTypeLabel(post.media_type)}</td>
                     <td>{int(post.reach)}</td>
                     <td>{int(post.save_count)}</td>
                     <td>{int(post.like_count)}</td>
@@ -126,6 +134,7 @@ export default function PostRankingTable({ posts }: { posts: PostWithMetrics[] }
                 <p><strong>シリーズ:</strong> {selected.series ? SERIES_LABEL_MAP[selected.series] ?? selected.series : '-'}</p>
                 <p><strong>コンテンツ種別:</strong> {selected.content_role ? CONTENT_ROLE_LABEL_MAP[selected.content_role] ?? selected.content_role : '-'}</p>
                 <p><strong>スライド枚数:</strong> {selected.slide_count ?? '-'}</p>
+                <p><strong>形式:</strong> {mediaTypeLabel(selected.media_type)}</p>
                 <p><strong>リーチ:</strong> {int(selected.reach)}</p>
                 <p><strong>保存:</strong> {int(selected.save_count)}（{pct(selected.save_rate)}）</p>
                 <p><strong>いいね:</strong> {int(selected.like_count)}</p>

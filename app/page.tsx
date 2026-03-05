@@ -41,8 +41,10 @@ function syncHealth(lastMetricDate: string | null) {
 export default async function Home({ searchParams }: { searchParams?: Record<string, string> }) {
   noStore();
 
+  const daysParam = Number(searchParams?.days ?? '45');
+  const days = Number.isFinite(daysParam) && [14, 30, 45, 60, 90].includes(daysParam) ? daysParam : 45;
   const envReady = hasCoreEnv();
-  const data = envReady ? await getDashboardData() : await getDashboardData(0);
+  const data = envReady ? await getDashboardData(days) : await getDashboardData(0);
   const latest = data.daily[data.daily.length - 1];
   const followers = latest?.followers_count ?? 0;
   const phase = getPhaseBadge(followers);
@@ -67,6 +69,13 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
         </div>
 
         <div className="actions">
+          <div className="period-switch" aria-label="期間切替">
+            {[14, 30, 45, 60].map((d) => (
+              <Link key={d} className={`period-link ${days === d ? 'active' : ''}`} href={`/?days=${d}`}>
+                {d}日
+              </Link>
+            ))}
+          </div>
           <Link className="button-secondary" href="/connect">Instagram連携</Link>
           <CopyWeeklyReportButton />
           <SyncNowButton />
@@ -126,8 +135,12 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
 
       <section className="grid-2">
         <Card>
-          <h3 className="section-title">フォロワー推移（直近14日）</h3>
-          <LineChartSimple points={data.chartPoints} />
+          <h3 className="section-title">フォロワー推移（直近{Math.min(14, days)}日）</h3>
+          {data.chartPoints.length < 2 ? (
+            <div className="notice">データ蓄積中です。あと1日以上同期されると推移が表示されます。</div>
+          ) : (
+            <LineChartSimple points={data.chartPoints} />
+          )}
         </Card>
 
         <Card>
@@ -153,6 +166,11 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
                     <td>{int(row.follows)}</td>
                   </tr>
                 ))}
+                {data.daily.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="muted">データ蓄積中です。同期後に表示されます。</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -172,7 +190,14 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
       </div>
 
       <section style={{ marginTop: 12 }}>
-        <PostRankingTable posts={data.topPosts} />
+        {data.topPosts.length === 0 ? (
+          <Card>
+            <h3 className="section-title">投稿ランキング</h3>
+            <div className="notice">投稿インサイトを蓄積中です。同期を続けるとランキングが表示されます。</div>
+          </Card>
+        ) : (
+          <PostRankingTable posts={data.topPosts} />
+        )}
       </section>
     </main>
   );
